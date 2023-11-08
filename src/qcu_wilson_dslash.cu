@@ -1,6 +1,6 @@
 #include "qcu_wilson_dslash.cuh"
 #include "kernel/qcu_wilson_dslash_naive.cuh"
-
+#include <chrono>
 namespace qcu {
 
   void WilsonDslash::calculateDslash(int invert_flag) {
@@ -39,5 +39,12 @@ namespace qcu {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("naive total time: (without malloc free memcpy) : %.9lf sec, block size = %d\n", double(duration) / 1e9, block_size);
+  }
+
+
+  void callWilsonDslashNaive(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag) {
+    DslashParam dslash_param(fermion_in, fermion_out, gauge, param, parity);
+    WilsonDslash dslash_solver(dslash_param);
+    dslash_solver.calculateDslashNaive(0);
   }
 };

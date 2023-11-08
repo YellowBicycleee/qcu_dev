@@ -1,9 +1,12 @@
 #include "qcu.h"
-
+#include "qcu_wilson_dslash.cuh"
 
 #include <iostream>
 using std::cout;
 using std::endl;
+
+// using namespace qcu;
+
 #define qcuPrint() { \
     printf("function %s line %d...\n", __FUNCTION__, __LINE__); \
 }
@@ -30,5 +33,5 @@ void dslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param
 
   // callWilsonDslash(fermion_out, fermion_in, gauge, param, parity, 0);
 
-  callWilsonDslashNaive(fermion_out, fermion_in, gauge, param, parity, 0);
+  qcu::callWilsonDslashNaive(fermion_out, fermion_in, gauge, param, parity, 0);
 }

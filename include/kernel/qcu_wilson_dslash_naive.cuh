@@ -6,6 +6,22 @@ using qcu::Complex;
 using qcu::Point;
 
 
+__device__ __forceinline__ void loadGauge(Complex* u_local, void* gauge_ptr, int direction, const Point& p, int Lx, int Ly, int Lz, int Lt) {
+  Complex* u = p.getPointGauge(static_cast<Complex*>(gauge_ptr), direction, Lx, Ly, Lz, Lt);
+  for (int i = 0; i < (Nc - 1) * Nc; i++) {
+    u_local[i] = u[i];
+  }
+  reconstructSU3(u_local);
+}
+__device__ __forceinline__ void loadVector(Complex* src_local, void* fermion_in, const Point& p, int Lx, int Ly, int Lz, int Lt) {
+  Complex* src = p.getPointVector(static_cast<Complex *>(fermion_in), Lx, Ly, Lz, Lt);
+  for (int i = 0; i < Ns * Nc; i++) {
+    src_local[i] = src[i];
+  }
+}
+
+
+
 static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermion_out,int Lx, int Ly, int Lz, int Lt, int parity, int grid_x, int grid_y, int grid_z, int grid_t, double flag_param) {
   assert(parity == 0 || parity == 1);
   int half_Lx = Lx >>= 1;
@@ -53,14 +69,14 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
       temp2.clear2Zero();
 #pragma unroll
       for (int j = 0; j < Nc; j++) {
-        temp1 += (src_local[0 * Nc + j] - src_local[3 * Nc + j].multipy_i() * flag) * u_local[i * Nc + j];
+        temp1 += (src_local[0 * Nc + j] - src_local[3 * Nc + j].multiply_i() * flag) * u_local[i * Nc + j];
         // second row vector with col vector
-        temp2 += (src_local[1 * Nc + j] - src_local[2 * Nc + j].multipy_i() * flag) * u_local[i * Nc + j];
+        temp2 += (src_local[1 * Nc + j] - src_local[2 * Nc + j].multiply_i() * flag) * u_local[i * Nc + j];
       }
       dst_local[0 * Nc + i] += temp1;
-      dst_local[3 * Nc + i] += temp1.multipy_i() * flag;
+      dst_local[3 * Nc + i] += temp1.multiply_i() * flag;
       dst_local[1 * Nc + i] += temp2;
-      dst_local[2 * Nc + i] += temp2.multipy_i() * flag;
+      dst_local[2 * Nc + i] += temp2.multiply_i() * flag;
     }
   }
   // x back   x==0 && parity == eo
@@ -70,7 +86,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 
   coord_boundary = (grid_x > 1 && x==0 && parity == eo) ? 1 : 0;
   if (x >= coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
@@ -78,17 +93,17 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 #pragma unroll
       for (int j = 0; j < Nc; j++) {
         // first row vector with col vector
-        temp1 += (src_local[0 * Nc + j] + src_local[3 * Nc + j].multipy_i() * flag) *
+        temp1 += (src_local[0 * Nc + j] + src_local[3 * Nc + j].multiply_i() * flag) *
               u_local[j * Nc + i].conj(); // transpose and conj
 
         // second row vector with col vector
-        temp2 += (src_local[1 * Nc + j] + src_local[2 * Nc + j].multipy_i() * flag) *
+        temp2 += (src_local[1 * Nc + j] + src_local[2 * Nc + j].multiply_i() * flag) *
               u_local[j * Nc + i].conj(); // transpose and conj
       }
       dst_local[0 * Nc + i] += temp1;
-      dst_local[3 * Nc + i] += temp1.multipy_minus_i() * flag;
+      dst_local[3 * Nc + i] += temp1.multiply_minus_i() * flag;
       dst_local[1 * Nc + i] += temp2;
-      dst_local[2 * Nc + i] += temp2.multipy_minus_i() * flag;
+      dst_local[2 * Nc + i] += temp2.multiply_minus_i() * flag;
     }
   }
 
@@ -100,7 +115,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 
   coord_boundary = (grid_y > 1) ? Ly-1 : Ly;
   if (y < coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
@@ -127,7 +141,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 
   coord_boundary = (grid_y > 1) ? 1 : 0;
   if (y >= coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
@@ -153,7 +166,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
   loadVector(src_local, fermion_in, move_point, half_Lx, Ly, Lz, Lt);
   coord_boundary = (grid_z > 1) ? Lz-1 : Lz;
   if (z < coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
@@ -161,14 +173,14 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 #pragma unroll
       for (int j = 0; j < Nc; j++) {
         // first row vector with col vector
-        temp1 += (src_local[0 * Nc + j] - src_local[2 * Nc + j].multipy_i() * flag) * u_local[i * Nc + j];
+        temp1 += (src_local[0 * Nc + j] - src_local[2 * Nc + j].multiply_i() * flag) * u_local[i * Nc + j];
         // second row vector with col vector
-        temp2 += (src_local[1 * Nc + j] + src_local[3 * Nc + j].multipy_i() * flag) * u_local[i * Nc + j];
+        temp2 += (src_local[1 * Nc + j] + src_local[3 * Nc + j].multiply_i() * flag) * u_local[i * Nc + j];
       }
       dst_local[0 * Nc + i] += temp1;
-      dst_local[2 * Nc + i] += temp1.multipy_i() * flag;
+      dst_local[2 * Nc + i] += temp1.multiply_i() * flag;
       dst_local[1 * Nc + i] += temp2;
-      dst_local[3 * Nc + i] += temp2.multipy_minus_i() * flag;
+      dst_local[3 * Nc + i] += temp2.multiply_minus_i() * flag;
     }
   }
 
@@ -179,7 +191,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 
   coord_boundary = (grid_z > 1) ? 1 : 0;
   if (z >= coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
@@ -187,16 +198,16 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 #pragma unroll
       for (int j = 0; j < Nc; j++) {
         // first row vector with col vector
-        temp1 += (src_local[0 * Nc + j] + src_local[2 * Nc + j].multipy_i() * flag) *
+        temp1 += (src_local[0 * Nc + j] + src_local[2 * Nc + j].multiply_i() * flag) *
               u_local[j * Nc + i].conj(); // transpose and conj
         // second row vector with col vector
-        temp2 += (src_local[1 * Nc + j] - src_local[3 * Nc + j].multipy_i() * flag) *
+        temp2 += (src_local[1 * Nc + j] - src_local[3 * Nc + j].multiply_i() * flag) *
               u_local[j * Nc + i].conj(); // transpose and conj
       }
       dst_local[0 * Nc + i] += temp1;
-      dst_local[2 * Nc + i] += temp1.multipy_minus_i() * flag;
+      dst_local[2 * Nc + i] += temp1.multiply_minus_i() * flag;
       dst_local[1 * Nc + i] += temp2;
-      dst_local[3 * Nc + i] += temp2.multipy_i() * flag;
+      dst_local[3 * Nc + i] += temp2.multiply_i() * flag;
     }
   }
 
@@ -207,7 +218,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 
   coord_boundary = (grid_t > 1) ? Lt-1 : Lt;
   if (t < coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
@@ -232,7 +242,6 @@ static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermi
 
   coord_boundary = (grid_t > 1) ? 1 : 0;
   if (t >= coord_boundary) {
-#ifdef INCLUDE_COMPUTATION
 #pragma unroll
     for (int i = 0; i < Nc; i++) {
       temp1.clear2Zero();
