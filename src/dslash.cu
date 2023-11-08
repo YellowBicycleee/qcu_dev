@@ -22,16 +22,12 @@ void loadQcuGauge(void* gauge, QcuParam *param){}
 
 
 void dslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity) {
-  // getDeviceInfo();
-  // parity ---- invert_flag
 
-  // cloverDslashOneRound(fermion_out, fermion_in, gauge, param, 0);
-  // cloverDslashOneRound(fermion_out, fermion_in, gauge, param, parity);
-  // fullCloverDslashOneRound(fermion_out, fermion_in, gauge, param, 0);
-  // wilsonDslashOneRound(fermion_out, fermion_in, gauge, param, parity);
-  // callWilsonDslash(fermion_out, fermion_in, gauge, param, parity, 0);
+  int dagger_flag = 0;
+  qcu::callWilsonDslashNaive(fermion_out, fermion_in, gauge, param, parity, dagger_flag);
+}
 
-  // callWilsonDslash(fermion_out, fermion_in, gauge, param, parity, 0);
-
-  qcu::callWilsonDslashNaive(fermion_out, fermion_in, gauge, param, parity, 0);
+void dslashQcuFull(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag, double kappa) {
+  // int dagger_flag = 0;
+  qcu::callFullWilsonDslashNaive(fermion_out, fermion_in, gauge, param, parity, dagger_flag, kappa);
 }

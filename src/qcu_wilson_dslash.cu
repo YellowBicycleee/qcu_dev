@@ -45,6 +45,24 @@ namespace qcu {
   void callWilsonDslashNaive(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag) {
     DslashParam dslash_param(fermion_in, fermion_out, gauge, param, parity);
     WilsonDslash dslash_solver(dslash_param);
-    dslash_solver.calculateDslashNaive(0);
+    dslash_solver.calculateDslashNaive(dagger_flag);
+  }
+
+  void callFullWilsonDslashNaive(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag, double kappa) {
+    DslashParam dslash_param(fermion_in, fermion_out, gauge, param, parity);
+    WilsonDslash dslash_solver(dslash_param);
+    dslash_solver.calculateDslashNaive(dagger_flag);
+
+
+    // dst = src - kappa dst
+    int Lx = param->lattice_size[0];
+    int Ly = param->lattice_size[1];
+    int Lz = param->lattice_size[2];
+    int Lt = param->lattice_size[3];
+    int half_vol = Lx / 2 * Ly * Lz * Lt;
+    int block_size = BLOCK_SIZE;
+    int grid_size = (half_vol + block_size - 1) / block_size;
+    mpiDslashNaiveTail<<<grid_size, block_size>>>(gauge, fermion_in, fermion_out, Lx, Ly, Lz, Lt, parity, kappa);
+    checkCudaErrors(cudaDeviceSynchronize());
   }
 };

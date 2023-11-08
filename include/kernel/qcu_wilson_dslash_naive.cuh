@@ -22,6 +22,37 @@ __device__ __forceinline__ void loadVector(Complex* src_local, void* fermion_in,
 
 
 
+static __global__ void mpiDslashNaiveTail(void *gauge, void *fermion_in, void *fermion_out, int Lx, int Ly, int Lz, int Lt, int parity, double kappa) {
+  assert(parity == 0 || parity == 1);
+  int half_Lx = Lx >>= 1;
+
+  int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (thread_id >= half_Lx * Ly * Lz * Lt) { // avoid grid * block > vol
+    return;
+  }
+
+  int t = thread_id / (Lz * Ly * half_Lx);
+  int z = thread_id % (Lz * Ly * half_Lx) / (Ly * half_Lx);
+  int y = thread_id % (Ly * half_Lx) / half_Lx;
+  int x = thread_id % half_Lx;
+
+  Complex src_local[Ns * Nc]; // for GPU
+  Complex dst_local[Ns * Nc]; // for GPU
+  Point point(x, y, z, t, parity);
+  loadVector(src_local, fermion_in, point, half_Lx, Ly, Lz, Lt);
+  loadVector(dst_local, fermion_out, point, half_Lx, Ly, Lz, Lt);
+  for (int i = 0; i < Ns * Nc; i++) {
+    dst_local[i] = src_local[i] - dst_local[i] * kappa;
+  }
+
+  Complex* dst_global = point.getPointVector(static_cast<Complex *>(fermion_out), half_Lx, Ly, Lz, Lt);
+  for (int i = 0; i < Ns * Nc; i++) {
+    dst_global[i] = dst_local[i];
+  }
+}
+
+
+
 static __global__ void mpiDslashNaive(void *gauge, void *fermion_in, void *fermion_out,int Lx, int Ly, int Lz, int Lt, int parity, int grid_x, int grid_y, int grid_z, int grid_t, double flag_param) {
   assert(parity == 0 || parity == 1);
   int half_Lx = Lx >>= 1;
