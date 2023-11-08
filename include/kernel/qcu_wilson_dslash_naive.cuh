@@ -2,6 +2,8 @@
 
 #include "qcu_complex.cuh"
 #include "qcu_point.cuh"
+
+
 using qcu::Complex;
 using qcu::Point;
 
@@ -41,6 +43,7 @@ static __global__ void mpiDslashNaiveTail(void *gauge, void *fermion_in, void *f
   Point point(x, y, z, t, parity);
   loadVector(src_local, fermion_in, point, half_Lx, Ly, Lz, Lt);
   loadVector(dst_local, fermion_out, point, half_Lx, Ly, Lz, Lt);
+
   for (int i = 0; i < Ns * Nc; i++) {
     dst_local[i] = src_local[i] - dst_local[i] * kappa;
   }

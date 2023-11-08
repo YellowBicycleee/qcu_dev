@@ -28,5 +28,6 @@ void dslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param
 
 void fullDslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag, double kappa) {
   // int dagger_flag = 0;
+  //callFullWilsonDslashNaive(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag, double kappa)
   qcu::callFullWilsonDslashNaive(fermion_out, fermion_in, gauge, param, parity, dagger_flag, kappa);
 }

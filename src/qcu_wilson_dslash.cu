@@ -49,21 +49,26 @@ namespace qcu {
   }
 
   void callFullWilsonDslashNaive(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag, double kappa) {
-    DslashParam dslash_param(fermion_in, fermion_out, gauge, param, parity);
-    WilsonDslash dslash_solver(dslash_param);
-    dslash_solver.calculateDslashNaive(dagger_flag);
 
-
-    // dst = src - kappa dst
     int Lx = param->lattice_size[0];
     int Ly = param->lattice_size[1];
     int Lz = param->lattice_size[2];
     int Lt = param->lattice_size[3];
     int half_vol = Lx / 2 * Ly * Lz * Lt;
+    void* diag_fermion_in = static_cast<void*>(static_cast<Complex*>(fermion_in) + parity * half_vol * Ns * Nc);
+    void* non_diag_fermion_in = static_cast<void*>(static_cast<Complex*>(fermion_in) + (1-parity) * half_vol * Ns * Nc);
+
+    DslashParam dslash_param(non_diag_fermion_in, fermion_out, gauge, param, parity);
+    WilsonDslash dslash_solver(dslash_param);
+    dslash_solver.calculateDslashNaive(dagger_flag);
+
+
+    // dst = src - kappa dst
+
     int block_size = BLOCK_SIZE;
     int grid_size = (half_vol + block_size - 1) / block_size;
     // mpiDslashNaiveTail(void *gauge, void *fermion_in, void *fermion_out, int Lx, int Ly, int Lz, int Lt, int parity, double kappa) 
-    mpiDslashNaiveTail<<<grid_size, block_size>>>(gauge, fermion_in, fermion_out, Lx, Ly, Lz, Lt, parity, kappa);
+    mpiDslashNaiveTail<<<grid_size, block_size>>>(gauge, diag_fermion_in, fermion_out, Lx, Ly, Lz, Lt, parity, kappa);
     checkCudaErrors(cudaDeviceSynchronize());
   }
 };
