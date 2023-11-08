@@ -24,7 +24,7 @@ __device__ __forceinline__ void loadVector(Complex* src_local, void* fermion_in,
 
 static __global__ void mpiDslashNaiveTail(void *gauge, void *fermion_in, void *fermion_out, int Lx, int Ly, int Lz, int Lt, int parity, double kappa) {
   assert(parity == 0 || parity == 1);
-  int half_Lx = Lx >>= 1;
+  int half_Lx = Lx >> 1;
 
   int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   if (thread_id >= half_Lx * Ly * Lz * Lt) { // avoid grid * block > vol

@@ -62,6 +62,7 @@ namespace qcu {
     int half_vol = Lx / 2 * Ly * Lz * Lt;
     int block_size = BLOCK_SIZE;
     int grid_size = (half_vol + block_size - 1) / block_size;
+    // mpiDslashNaiveTail(void *gauge, void *fermion_in, void *fermion_out, int Lx, int Ly, int Lz, int Lt, int parity, double kappa) 
     mpiDslashNaiveTail<<<grid_size, block_size>>>(gauge, fermion_in, fermion_out, Lx, Ly, Lz, Lt, parity, kappa);
     checkCudaErrors(cudaDeviceSynchronize());
   }
