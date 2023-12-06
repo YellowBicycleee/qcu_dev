@@ -1,15 +1,17 @@
 #include "qcu_wilson_dslash.cuh"
 #include "kernel/qcu_wilson_dslash_naive.cuh"
 #include <chrono>
-namespace qcu {
+#include <cstdio>
 
-  void WilsonDslash::calculateDslash(int invert_flag) {
+namespace qcu {
+  extern int proc_size[Nd];
+
+  void WilsonDslash::calculateDslash(int dagger_flag) {
 
   }
 
 
   void WilsonDslash::calculateDslashNaive(int dagger_flag) {
-    int grid_x = 1, grid_y = 1, grid_z = 1, grid_t = 1;
 
     int Lx = dslashParam_->Lx;
     int Ly = dslashParam_->Ly;
@@ -24,16 +26,21 @@ namespace qcu {
     dim3 gridDim(grid_size);
     dim3 blockDim(block_size);
   
-    checkCudaErrors(cudaDeviceSynchronize());
+    qcuCudaDeviceSynchronize();
   
     // mpi_comm->preDslash(dslashParam_->fermion_in, parity, invert_flag);
   
     auto start = std::chrono::high_resolution_clock::now();
-    void *args[] = {&dslashParam_->gauge, &dslashParam_->fermion_in, &dslashParam_->fermion_out, &Lx, &Ly, &Lz, &Lt, &parity, &grid_x, &grid_y, &grid_z, &grid_t, &flag};
+
+    void *args[] = {&dslashParam_->gauge, &dslashParam_->fermion_in, \
+                    &dslashParam_->fermion_out, &Lx, &Ly, &Lz, &Lt, \
+                    &parity, &proc_size[0], &proc_size[1], &proc_size[2], \
+                    &proc_size[3], &flag};
   
     checkCudaErrors(cudaLaunchKernel((void *)mpiDslashNaive, gridDim, blockDim, args));
-  
-    checkCudaErrors(cudaDeviceSynchronize());
+
+    qcuCudaDeviceSynchronize();
+
     // boundary calculate
     // mpi_comm->postDslash(dslashParam_->fermion_out, parity, invert_flag);
     auto end = std::chrono::high_resolution_clock::now();
@@ -43,6 +50,7 @@ namespace qcu {
 
 
   void callWilsonDslashNaive(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity, int dagger_flag) {
+    printf("Naive Wilson Dslash...\n");
     DslashParam dslash_param(fermion_in, fermion_out, gauge, param, parity);
     WilsonDslash dslash_solver(dslash_param);
     dslash_solver.calculateDslashNaive(dagger_flag);
@@ -67,8 +75,7 @@ namespace qcu {
 
     int block_size = BLOCK_SIZE;
     int grid_size = (half_vol + block_size - 1) / block_size;
-    // mpiDslashNaiveTail(void *gauge, void *fermion_in, void *fermion_out, int Lx, int Ly, int Lz, int Lt, int parity, double kappa) 
     mpiDslashNaiveTail<<<grid_size, block_size>>>(gauge, diag_fermion_in, fermion_out, Lx, Ly, Lz, Lt, parity, kappa);
-    checkCudaErrors(cudaDeviceSynchronize());
+    qcuCudaDeviceSynchronize();
   }
 };

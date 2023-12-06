@@ -50,6 +50,11 @@ namespace qcu {
   class Dslash {
   protected:
     DslashParam *dslashParam_;
+    int Lx_;
+    int Ly_;
+    int Lz_;
+    int Lt_;
+    int parity_;
   public:
     Dslash(DslashParam& param) : dslashParam_(&param){}
     virtual void calculateDslash(int invert_flag) = 0;

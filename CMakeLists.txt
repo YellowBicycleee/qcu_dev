@@ -6,7 +6,7 @@ project(QCU LANGUAGES C CXX CUDA)
 
 include_directories(include)
 include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include)
-add_library(qcu SHARED src/dslash.cu   src/qcu_wilson_dslash.cu)
+add_library(qcu SHARED src/qcu.cu   src/qcu_wilson_dslash.cu)
 
 
 find_package(MPI REQUIRED)
